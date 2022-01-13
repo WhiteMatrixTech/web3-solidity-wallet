@@ -1,35 +1,52 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import Web3 from 'web3';
-import { AbiItem, AbiInput, AbiOutput } from 'web3-utils';
+import Web3 from "web3";
+import { AbiItem, AbiInput, AbiOutput } from "web3-utils";
 
-const SolidityStructToJsName = 'tuple';
+const SolidityStructToJsName = "tuple";
 
 export class AbiHelper {
   private web3: Web3;
 
-  constructor() {
-    this.web3 = new Web3(Web3.givenProvider);
+  constructor(web3: Web3) {
+    this.web3 = web3;
   }
 
   validAndParseArgs(abiInputs: AbiInput[], args: Record<string, unknown>) {
     const functionArguments: string[] = [];
     abiInputs.forEach((input) => {
-      functionArguments.push(this.validAndParseArg(input.type, args[input.name]));
+      functionArguments.push(
+        this.validAndParseArg(input.type, args[input.name])
+      );
     });
     return functionArguments;
   }
 
-  encodeParameters(abiInputs: AbiInput[], args: Record<string, unknown>): string {
+  encodeParameters(
+    abiInputs: AbiInput[],
+    args: Record<string, unknown>
+  ): string {
     const fullInputsType = this.getFullTypesArray(abiInputs);
     const functionArguments: string[] = this.validAndParseArgs(abiInputs, args);
-    return this.web3.eth.abi.encodeParameters(fullInputsType, functionArguments);
+    return this.web3.eth.abi.encodeParameters(
+      fullInputsType,
+      functionArguments
+    );
   }
 
-  encodeFunctionCall(abiInputs: AbiInput[], jsonInterface: AbiItem, args: Record<string, unknown>): string {
-    const functionArguments: string[] = this.validAndParseArgs(abiInputs, args);
-    return this.web3.eth.abi.encodeFunctionCall(jsonInterface, functionArguments);
+  encodeFunctionCall(
+    jsonInterface: AbiItem,
+    args: Record<string, unknown>
+  ): string {
+    const functionArguments: string[] = this.validAndParseArgs(
+      jsonInterface.inputs || [],
+      args
+    );
+    return this.web3.eth.abi.encodeFunctionCall(
+      jsonInterface,
+      functionArguments
+    );
   }
 
   getFullTypesArray(inputs: AbiInput[]) {
@@ -48,7 +65,10 @@ export class AbiHelper {
   makeOutputMeaningful(output: AbiOutput[], _results: Record<string, any>) {
     const meaningFulOutput = output.map((output, i) => {
       if (output.type === SolidityStructToJsName) {
-        const internalType = this.meaningTupleOutput(_results[i], output.components);
+        const internalType = this.meaningTupleOutput(
+          _results[i],
+          output.components
+        );
         return {
           [output.name || i]: internalType,
         };
@@ -69,33 +89,33 @@ export class AbiHelper {
         try {
           finalArgs = JSON.parse(arg);
         } catch (err) {
-          console.log('Error encoding arguments:', err);
+          console.log("Error encoding arguments:", err);
           throw initMes;
         }
         break;
       }
-      case argType.includes('[]'): {
+      case argType.includes("[]"): {
         try {
           finalArgs = JSON.parse(arg);
           if (!Array.isArray(finalArgs)) {
             throw initMes;
           }
         } catch (err) {
-          console.log('Error encoding arguments:', err);
+          console.log("Error encoding arguments:", err);
           throw initMes;
         }
         break;
       }
 
-      case argType.includes('bool'): {
-        if (!['true', 'false', true, false].includes(arg)) {
+      case argType.includes("bool"): {
+        if (!["true", "false", true, false].includes(arg)) {
           throw initMes;
         }
-        finalArgs = arg === 'true';
+        finalArgs = arg === "true";
         break;
       }
 
-      case argType.includes('address'): {
+      case argType.includes("address"): {
         if (!this.web3.utils.isAddress(arg)) {
           throw initMes;
         }
@@ -127,7 +147,10 @@ export class AbiHelper {
     outputs &&
       outputs.forEach((output, index) => {
         if (output.type === SolidityStructToJsName) {
-          const internalType = this.meaningTupleOutput(results[index], output.components);
+          const internalType = this.meaningTupleOutput(
+            results[index],
+            output.components
+          );
           tupleType[output.name] = internalType;
         } else {
           tupleType[output.name] = results[index];
