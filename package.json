@@ -1,0 +1,51 @@
+{
+  "name": "@white-matrix/web3-solidity-wallet",
+  "version": "1.0.1",
+  "description": "basic wallet plugin interface &amp; web3 utils",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "test": "jest --config jestConfig.json",
+    "build": "tsc --downlevelIteration && cp src/type.d.ts lib/",
+    "lint": "eslint -c ./.eslintrc.js --ext .ts,.tsx,.js,.jsx ./src --quiet",
+    "lint:fix": "eslint -c ./.eslintrc.js --ext .ts,.tsx,.js,.jsx ./src --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WhiteMatrixTech/web3-solidity-wallet.git"
+  },
+  "pre-commit": [
+    "lint"
+  ],
+  "keywords": [
+    "wallet",
+    "web3-utils"
+  ],
+  "author": "Liyw",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/WhiteMatrixTech/web3-solidity-wallet/issues"
+  },
+  "homepage": "https://github.com/WhiteMatrixTech/web3-solidity-wallet#readme",
+  "devDependencies": {
+    "@types/jest": "^27.4.0",
+    "@white-matrix/eslint-config": "^1.0.9",
+    "@white-matrix/prettier-config": "^1.0.9",
+    "eslint-plugin-prettier": "^4.0.0",
+    "jest": "^27.4.7",
+    "pre-commit": "^1.2.2",
+    "prettier": "^2.3.1",
+    "terser-webpack-plugin": "^5.1.1",
+    "ts-jest": "^27.0.3",
+    "ts-loader": "9.2.3",
+    "typescript": "^4.2.3",
+    "webpack": "5.46.0",
+    "webpack-cli": "^4.5.0",
+    "webpack-dev-server": "^3.11.2"
+  },
+  "dependencies": {
+    "rxjs": "^7.0.0",
+    "web3": "^1.6.1",
+    "web3-utils": "^1.6.1"
+  }
+}
