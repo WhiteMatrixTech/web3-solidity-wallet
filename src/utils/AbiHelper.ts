@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import Web3 from "web3";
 import { AbiItem, AbiInput, AbiOutput } from "web3-utils";
+import { defaultAbiCoder } from "@ethersproject/abi";
 
 const SolidityStructToJsName = "tuple";
 
@@ -13,8 +14,11 @@ export class AbiHelper {
     this.web3 = web3;
   }
 
-  validAndParseArgs(abiInputs: AbiInput[], args: Record<string, unknown>) {
+  validAndParseArgs(abiInputs: AbiInput[], args: Record<string, string>) {
     const functionArguments: string[] = [];
+    if (abiInputs.length === 0) {
+      return functionArguments;
+    }
     abiInputs.forEach((input) => {
       functionArguments.push(
         this.validAndParseArg(input.type, args[input.name])
@@ -25,34 +29,39 @@ export class AbiHelper {
 
   encodeParameters(
     abiInputs: AbiInput[],
-    args: Record<string, unknown>
+    args: Record<string, string>
   ): string {
-    const fullInputsType = this.getFullTypesArray(abiInputs);
+    const paramsTypes = this.getParamTypeArray(abiInputs);
     const functionArguments: string[] = this.validAndParseArgs(abiInputs, args);
-    return this.web3.eth.abi.encodeParameters(
-      fullInputsType,
-      functionArguments
-    );
+    return defaultAbiCoder.encode(paramsTypes, functionArguments);
   }
 
   encodeFunctionCall(
     jsonInterface: AbiItem,
-    args: Record<string, unknown>
+    args: Record<string, string>
   ): string {
-    const functionArguments: string[] = this.validAndParseArgs(
-      jsonInterface.inputs || [],
-      args
+    const sigHash = this.web3.eth.abi.encodeFunctionSignature(jsonInterface);
+    const params = this.encodeParameters(jsonInterface?.inputs || [], args);
+    return sigHash + params.slice(2);
+  }
+
+  getParamTypeArray(inputs: AbiInput[]) {
+    const typesArray = inputs.map((input) =>
+      this.getTupleType(input.type, input?.components)
     );
-    return this.web3.eth.abi.encodeFunctionCall(
-      jsonInterface,
-      functionArguments
-    );
+    return typesArray;
+  }
+
+  makeOutputMeaningful(outputs: AbiOutput[], execResult: string) {
+    const fullOutputType = this.getParamTypeArray(outputs);
+    const meaningFulOutput = defaultAbiCoder.decode(fullOutputType, execResult);
+    return meaningFulOutput;
   }
 
   getFullTypesArray(inputs: AbiInput[]) {
     const typesArray = inputs.map((input) => {
       if (input.type === SolidityStructToJsName) {
-        const internalType = this.getTupleType(input.components);
+        const internalType = this.getTupleTypeObj(input.components);
         return {
           [input.name]: internalType,
         };
@@ -62,98 +71,114 @@ export class AbiHelper {
     return typesArray;
   }
 
-  makeOutputMeaningful(output: AbiOutput[], _results: Record<string, any>) {
-    const meaningFulOutput = output.map((output, i) => {
-      if (output.type === SolidityStructToJsName) {
-        const internalType = this.meaningTupleOutput(
-          _results[i],
-          output.components
-        );
-        return {
-          [output.name || i]: internalType,
-        };
+  private validAndParseArg(argType: string, arg: string) {
+    const isBoolType = argType === "bool";
+    const isArrayType = argType.includes("[]");
+    const isStructType = argType.includes(SolidityStructToJsName);
+
+    const argValidFailedError = new Error(
+      `Error: invalid ${argType} parameter. Expect argType but got ${arg}`
+    );
+
+    let parsedArgs: any;
+    try {
+      parsedArgs =
+        isStructType || isArrayType || isBoolType ? JSON.parse(arg) : arg;
+    } catch (err) {
+      throw argValidFailedError;
+    }
+
+    let effective = true;
+    switch (true) {
+      // 结构体嵌套，不便验证，跳过
+      case isStructType: {
+        effective = true;
+        break;
       }
-      return _results[i];
-    });
-    return meaningFulOutput;
+
+      // 简单类型数组
+      case isArrayType: {
+        const arrElementType = argType.substring(0, argType.length - 2);
+        (parsedArgs as any[]).forEach((parsedArg) => {
+          effective = this.validBasicSolidityType(arrElementType, parsedArg);
+          if (!effective) {
+            throw argValidFailedError;
+          }
+        });
+        break;
+      }
+
+      default:
+        effective = this.validBasicSolidityType(argType.toString(), parsedArgs);
+        if (!effective) {
+          throw argValidFailedError;
+        }
+        break;
+    }
+
+    return parsedArgs;
   }
 
-  private validAndParseArg(argType: string, arg: any) {
-    let finalArgs = arg;
-    const initMes = `Error encoding arguments: Error: invalid ${argType} value`;
-    if (!arg) {
-      throw initMes;
-    }
+  private validBasicSolidityType(type: string, arg: any) {
+    let effective = true;
     switch (true) {
-      case argType.includes(SolidityStructToJsName): {
-        try {
-          finalArgs = JSON.parse(arg);
-        } catch (err) {
-          console.log("Error encoding arguments:", err);
-          throw initMes;
-        }
-        break;
-      }
-      case argType.includes("[]"): {
-        try {
-          finalArgs = JSON.parse(arg);
-          if (!Array.isArray(finalArgs)) {
-            throw initMes;
-          }
-        } catch (err) {
-          console.log("Error encoding arguments:", err);
-          throw initMes;
-        }
+      case type.includes("bool"): {
+        effective = ["true", "false", true, false].includes(arg);
         break;
       }
 
-      case argType.includes("bool"): {
-        if (!["true", "false", true, false].includes(arg)) {
-          throw initMes;
-        }
-        finalArgs = arg === "true";
+      case type.includes("string"): {
+        effective = typeof arg === "string";
         break;
       }
 
-      case argType.includes("address"): {
-        if (!this.web3.utils.isAddress(arg)) {
-          throw initMes;
-        }
+      case type.includes("int"):
+      case type.includes("unit"): {
+        effective = !isNaN(Number(arg));
+        break;
+      }
+
+      case type.includes("byte"): {
+        effective = this.web3.utils.isHexStrict(arg);
         break;
       }
 
       default:
         break;
     }
-    return finalArgs;
+    return effective;
   }
 
-  private getTupleType(inputs?: AbiInput[]) {
+  private getTupleType(type: string, components?: AbiInput[]) {
+    if (!components) {
+      return type;
+    }
+    const typeAndKeywordList: string[] = [];
+    components &&
+      components.forEach((input) => {
+        if (input.type.includes(SolidityStructToJsName)) {
+          const internalType = this.getTupleType(input.type, input.components);
+          typeAndKeywordList.push(internalType);
+        } else {
+          typeAndKeywordList.push(input.type);
+        }
+      });
+    const tupleSuffix = type.includes("[]") ? "[]" : "";
+    const tupleType = `${SolidityStructToJsName}(${typeAndKeywordList.join(
+      ", "
+    )})${tupleSuffix}`;
+    return tupleType;
+  }
+
+  private getTupleTypeObj(inputs?: AbiInput[]) {
     const tupleType: { [key: string]: any } = {};
     inputs &&
       inputs.forEach((input) => {
         if (input.type === SolidityStructToJsName) {
-          const internalType = this.getTupleType(input.components);
+          const internalType = this.getTupleTypeObj(input.components);
           tupleType[input.name] = internalType;
         } else {
           tupleType[input.name] = input.type;
-        }
-      });
-    return tupleType;
-  }
-
-  private meaningTupleOutput(results: any[], outputs?: AbiOutput[]) {
-    const tupleType: { [key: string]: any } = {};
-    outputs &&
-      outputs.forEach((output, index) => {
-        if (output.type === SolidityStructToJsName) {
-          const internalType = this.meaningTupleOutput(
-            results[index],
-            output.components
-          );
-          tupleType[output.name] = internalType;
-        } else {
-          tupleType[output.name] = results[index];
         }
       });
     return tupleType;
