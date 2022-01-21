@@ -133,7 +133,7 @@ export class AbiHelper {
       }
 
       case type.includes("int"):
-      case type.includes("unit"): {
+      case type.includes("uint"): {
         effective = !isNaN(Number(arg));
         break;
       }
