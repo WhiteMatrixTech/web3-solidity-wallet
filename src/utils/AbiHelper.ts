@@ -77,7 +77,7 @@ export class AbiHelper {
     const isStructType = argType.includes(SolidityStructToJsName);
 
     const argValidFailedError = new Error(
-      `Error: invalid ${argType} parameter. Expect argType but got ${arg}`
+      `Error: invalid ${argType} parameter. Expect ${argType} but got ${arg}`
     );
 
     let parsedArgs: any;
