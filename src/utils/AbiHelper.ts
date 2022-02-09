@@ -73,7 +73,7 @@ export class AbiHelper {
 
   private validAndParseArg(argType: string, arg: string) {
     const isBoolType = argType === "bool";
-    const isArrayType = argType.includes("[]");
+    const isArrayType = argType.includes("[]") || argType.includes("[");
     const isStructType = argType.includes(SolidityStructToJsName);
 
     const argValidFailedError = new Error(
