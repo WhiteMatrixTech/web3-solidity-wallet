@@ -73,7 +73,9 @@ export class AbiHelper {
 
   private validAndParseArg(argType: string, arg: string) {
     const isBoolType = argType === "bool";
-    const isArrayType = argType.includes("[]") || argType.includes("[");
+    const isBasicArray = argType.split("[").length - 1 === 1;
+    const otherArray = argType.split("[").length - 1 > 1;
+    const isArrayType = isBasicArray || otherArray;
     const isStructType = argType.includes(SolidityStructToJsName);
 
     const argValidFailedError = new Error(
@@ -90,14 +92,15 @@ export class AbiHelper {
 
     let effective = true;
     switch (true) {
-      // 结构体嵌套，不便验证，跳过
+      // 结构体嵌套及复杂数组，不便验证，跳过
+      case otherArray:
       case isStructType: {
         effective = true;
         break;
       }
 
       // 简单类型数组
-      case isArrayType: {
+      case isBasicArray: {
         const arrElementType = argType.substring(0, argType.length - 2);
         (parsedArgs as any[]).forEach((parsedArg) => {
           effective = this.validBasicSolidityType(arrElementType, parsedArg);
