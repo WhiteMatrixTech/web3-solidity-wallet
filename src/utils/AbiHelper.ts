@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import Web3 from "web3";
+import isArray from "lodash/isArray";
 import { AbiItem, AbiInput, AbiOutput } from "web3-utils";
 import { defaultAbiCoder } from "@ethersproject/abi";
 
@@ -10,8 +12,8 @@ const SolidityStructToJsName = "tuple";
 export class AbiHelper {
   private web3: Web3;
 
-  constructor(web3: Web3) {
-    this.web3 = web3;
+  constructor(web3?: Web3) {
+    this.web3 = web3 ?? new Web3(Web3.givenProvider);
   }
 
   validAndParseArgs(abiInputs: AbiInput[], args: Record<string, string>) {
@@ -69,6 +71,69 @@ export class AbiHelper {
       return input.type;
     });
     return typesArray;
+  }
+
+  decodeFunctionResult(params: {
+    abiOutputs: AbiOutput[];
+    originResult: any[];
+    isOriginBytes?: boolean;
+  }) {
+    const { abiOutputs, originResult, isOriginBytes = false } = params;
+    if (originResult === undefined) {
+      return null;
+    }
+
+    const Result: unknown[] = [];
+    abiOutputs.forEach((abiOutput, index) => {
+      let tempVar: unknown;
+      const tempResult =
+        abiOutputs.length > 1 ? originResult[index] : originResult;
+      switch (true) {
+        case abiOutput.type.includes("tuple"): {
+          try {
+            if (isArray(tempResult)) {
+              tempVar = tempResult.map((resultItem) =>
+                this.decodeFunctionResult({
+                  abiOutputs: abiOutput.components || [],
+                  originResult: resultItem,
+                  isOriginBytes,
+                })
+              );
+            }
+          } catch {
+            tempVar = this.decodeFunctionResult({
+              abiOutputs: abiOutput.components || [],
+              originResult: tempResult,
+              isOriginBytes,
+            });
+          }
+          break;
+        }
+        case isOriginBytes && abiOutput.type.includes("bytes"): {
+          const hexResult = defaultAbiCoder.encode(
+            [abiOutput.type],
+            [originResult[index]]
+          );
+          tempVar = this.web3.eth.abi.decodeParameter(
+            abiOutput.type,
+            hexResult
+          );
+          break;
+        }
+        case abiOutput.type.includes("int"): {
+          tempVar = this.numericalResult(tempResult);
+          break;
+        }
+        default: {
+          tempVar = abiOutputs.length > 1 ? originResult[index] : originResult;
+          break;
+        }
+      }
+
+      Result.push(tempVar);
+    });
+
+    return Result;
   }
 
   private validAndParseArg(argType: string, arg: string) {
@@ -185,5 +250,16 @@ export class AbiHelper {
         }
       });
     return tupleType;
+  }
+
+  private numericalResult(results: any): any {
+    // eslint-disable-next-line no-proto
+    const isUintArray = results.__proto__.constructor
+      .toString()
+      .startsWith("function Array()");
+    if (isArray(results) && isUintArray) {
+      return results.map((result) => this.numericalResult(result));
+    }
+    return Number(results);
   }
 }
