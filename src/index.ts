@@ -2,6 +2,7 @@ import { Observable } from "rxjs";
 import { We3SolidityWallet } from "./type";
 import { AbiHelper } from "./utils/AbiHelper";
 
+const defaultAbiHelper: AbiHelper = new AbiHelper();
 declare class We3SolidityWalletInst {
   walletId: string;
   walletProvider?: unknown;
@@ -44,4 +45,4 @@ declare class We3SolidityWalletInst {
   setMaxTimes?: (maxTimes: number) => void;
 }
 
-export { AbiHelper, We3SolidityWalletInst };
+export { AbiHelper, We3SolidityWalletInst, defaultAbiHelper };
