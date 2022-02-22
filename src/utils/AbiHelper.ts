@@ -12,8 +12,8 @@ const SolidityStructToJsName = "tuple";
 export class AbiHelper {
   private web3: Web3;
 
-  constructor(web3?: Web3) {
-    this.web3 = web3 ?? new Web3(Web3.givenProvider);
+  constructor(web3: Web3) {
+    this.web3 = web3;
   }
 
   validAndParseArgs(abiInputs: AbiInput[], args: Record<string, string>) {
