@@ -1,6 +1,6 @@
 {
   "name": "@white-matrix/web3-solidity-wallet",
-  "version": "1.0.13",
+  "version": "1.1.0",
   "description": "basic wallet plugin interface &amp; web3 utils",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -48,7 +48,7 @@
     "@ethersproject/abi": "^5.5.0",
     "lodash": "^4.17.21",
     "rxjs": "^7.0.0",
-    "web3": "1.5.1",
-    "web3-utils": "^1.6.1"
+    "web3": "^1.7.0",
+    "web3-utils": "^1.7.0"
   }
 }
