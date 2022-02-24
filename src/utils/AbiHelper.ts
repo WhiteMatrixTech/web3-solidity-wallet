@@ -79,7 +79,7 @@ export class AbiHelper {
     isOriginBytes?: boolean;
   }) {
     const { abiOutputs, originResult, isOriginBytes = false } = params;
-    if (originResult === undefined) {
+    if (originResult === undefined || abiOutputs.length === 0) {
       return null;
     }
 
