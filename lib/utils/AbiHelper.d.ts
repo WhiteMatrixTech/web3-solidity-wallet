@@ -17,7 +17,7 @@ export declare class AbiHelper {
         abiOutputs: AbiOutput[];
         originResult: any[];
         isOriginBytes?: boolean;
-    }): unknown[] | null;
+    }): any;
     private validAndParseArg;
     private validBasicSolidityType;
     private getTupleType;

@@ -79,15 +79,16 @@ export class AbiHelper {
     isOriginBytes?: boolean;
   }) {
     const { abiOutputs, originResult, isOriginBytes = false } = params;
-    if (originResult === undefined || abiOutputs.length === 0) {
+
+    const outputNum = abiOutputs.length;
+    if (originResult === undefined || outputNum === 0) {
       return null;
     }
 
-    const Result: unknown[] = [];
+    let Result: any = [];
     abiOutputs.forEach((abiOutput, index) => {
       let tempVar: unknown;
-      const tempResult =
-        abiOutputs.length > 1 ? originResult[index] : originResult;
+      const tempResult = outputNum > 1 ? originResult[index] : originResult;
       switch (true) {
         case abiOutput.type.includes("tuple"): {
           try {
@@ -125,12 +126,16 @@ export class AbiHelper {
           break;
         }
         default: {
-          tempVar = abiOutputs.length > 1 ? originResult[index] : originResult;
+          tempVar = outputNum > 1 ? originResult[index] : originResult;
           break;
         }
       }
 
-      Result.push(tempVar);
+      if (outputNum === 1) {
+        Result = tempVar;
+      } else {
+        Result.push(tempVar);
+      }
     });
 
     return Result;
