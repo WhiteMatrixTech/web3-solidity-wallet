@@ -265,6 +265,13 @@ export class AbiHelper {
     if (isArray(results) && isUintArray) {
       return results.map((result) => this.numericalResult(result));
     }
-    return Number(results);
+    const numValue = Number(results);
+    if (
+      numValue >= Number.MAX_SAFE_INTEGER ||
+      numValue <= Number.MIN_SAFE_INTEGER
+    ) {
+      return results;
+    }
+    return numValue;
   }
 }
