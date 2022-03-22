@@ -113,7 +113,7 @@ export class AbiHelper {
         case isOriginBytes && abiOutput.type.includes("bytes"): {
           const hexResult = defaultAbiCoder.encode(
             [abiOutput.type],
-            [originResult[index]]
+            [tempResult]
           );
           tempVar = this.web3.eth.abi.decodeParameter(
             abiOutput.type,
@@ -126,7 +126,7 @@ export class AbiHelper {
           break;
         }
         default: {
-          tempVar = outputNum > 1 ? originResult[index] : originResult;
+          tempVar = tempResult;
           break;
         }
       }

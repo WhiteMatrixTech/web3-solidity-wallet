@@ -1,6 +1,6 @@
 {
   "name": "@white-matrix/web3-solidity-wallet",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "basic wallet plugin interface &amp; web3 utils",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
